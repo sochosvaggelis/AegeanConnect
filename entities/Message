@@ -1,0 +1,33 @@
+{
+    "name": "Message",
+    "type": "object",
+    "properties": {
+        "conversation_id": {
+            "type": "string",
+            "description": "ID of the conversation"
+        },
+        "sender_email": {
+            "type": "string",
+            "description": "Email of the sender"
+        },
+        "sender_name": {
+            "type": "string",
+            "description": "Name of the sender"
+        },
+        "content": {
+            "type": "string",
+            "description": "Message content"
+        },
+        "read": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether message has been read"
+        }
+    },
+    "required": [
+        "conversation_id",
+        "sender_email",
+        "sender_name",
+        "content"
+    ]
+}

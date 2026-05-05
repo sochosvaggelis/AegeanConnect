@@ -1,0 +1,48 @@
+{
+  "name": "Conversation",
+  "type": "object",
+  "properties": {
+    "participant_1": {
+      "type": "string",
+      "description": "Email of first participant"
+    },
+    "participant_2": {
+      "type": "string",
+      "description": "Email of second participant"
+    },
+    "participant_1_name": {
+      "type": "string",
+      "description": "Name of first participant"
+    },
+    "participant_2_name": {
+      "type": "string",
+      "description": "Name of second participant"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Related job ID if any"
+    },
+    "job_title": {
+      "type": "string",
+      "description": "Related job title if any"
+    },
+    "last_message": {
+      "type": "string",
+      "description": "Preview of last message"
+    },
+    "last_message_date": {
+      "type": "string",
+      "description": "Date of last message"
+    },
+    "unread_by": {
+      "type": "string",
+      "description": "Email of user who has unread messages"
+    }
+  },
+  "required": [
+    "participant_1",
+    "participant_2",
+    "participant_1_name",
+    "participant_2_name"
+  ]
+}

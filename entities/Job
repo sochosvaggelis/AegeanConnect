@@ -1,0 +1,93 @@
+{
+  "name": "Job",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Job title"
+    },
+    "hotel_name": {
+      "type": "string",
+      "description": "Name of the hotel"
+    },
+    "hotel_user_id": {
+      "type": "string",
+      "description": "User ID of the hotel that posted"
+    },
+    "location": {
+      "type": "string",
+      "description": "Location of the hotel"
+    },
+    "description": {
+      "type": "string",
+      "description": "Full job description"
+    },
+    "requirements": {
+      "type": "string",
+      "description": "Job requirements"
+    },
+    "employment_type": {
+      "type": "string",
+      "enum": [
+        "full_time",
+        "part_time",
+        "seasonal",
+        "temporary"
+      ],
+      "description": "Type of employment"
+    },
+    "salary_range": {
+      "type": "string",
+      "description": "Salary range"
+    },
+    "positions_available": {
+      "type": "number",
+      "description": "Number of open positions"
+    },
+    "start_date": {
+      "type": "string",
+      "description": "Expected start date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "closed",
+        "draft"
+      ],
+      "default": "active"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "fine_dining",
+        "wine_expert",
+        "pool_beach",
+        "breakfast",
+        "banquet",
+        "room_service",
+        "head_waiter",
+        "catering"
+      ],
+      "description": "Server specialization category"
+    },
+    "benefits": {
+      "type": "string",
+      "description": "Benefits offered"
+    },
+    "hotel_logo": {
+      "type": "string",
+      "description": "URL of hotel logo"
+    }
+  },
+  "required": [
+    "title",
+    "hotel_name",
+    "hotel_user_id",
+    "location",
+    "description",
+    "employment_type",
+    "category",
+    "status"
+  ]
+}
