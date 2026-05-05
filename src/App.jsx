@@ -1,12 +1,9 @@
-import { Toaster } from "@/components/ui/toaster"
-import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Toaster } from "@/components/ui/toaster";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClientInstance } from '@/lib/query-client';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Jobs from './pages/Jobs';
@@ -16,52 +13,24 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import PostJob from './pages/PostJob';
 import Admin from './pages/Admin';
+import Login from './pages/Login';
 import RoleSelector from './components/RoleSelector';
 
-const AuthenticatedApp = () => {
-    const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-    const [user, setUser] = useState(null);
-    const [checkingRole, setCheckingRole] = useState(true);
+const AppContent = () => {
+    const { isLoading, isAuthenticated, me, refreshProfile } = useAuth();
 
-    useEffect(() => {
-        const checkUser = async () => {
-            try {
-                const me = await base44.auth.me();
-                setUser(me);
-            } catch (e) {
-                // not logged in
-            }
-            setCheckingRole(false);
-        };
-        if (!isLoadingAuth && !isLoadingPublicSettings) checkUser();
-    }, [isLoadingAuth, isLoadingPublicSettings]);
-
-    // Show loading spinner while checking app public settings or auth
-    if (isLoadingPublicSettings || isLoadingAuth || checkingRole) {
+    if (isLoading) {
         return (
             <div className="fixed inset-0 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
             </div>
         );
     }
 
-    // Handle authentication errors
-    if (authError) {
-        if (authError.type === 'user_not_registered') {
-            return <UserNotRegisteredError />;
-        } else if (authError.type === 'auth_required') {
-            // Redirect to login automatically
-            navigateToLogin();
-            return null;
-        }
+    if (isAuthenticated && me && !me.role_chosen && me.role !== 'admin') {
+        return <RoleSelector onComplete={refreshProfile} />;
     }
 
-    // Show role selector for new users
-    if (user && !user.role_chosen && user.role !== 'admin') {
-        return <RoleSelector onComplete={() => setUser(prev => ({ ...prev, role_chosen: true }))} />;
-    }
-
-    // Render the main app
     return (
         <Routes>
             <Route element={<Layout />}>
@@ -73,25 +42,24 @@ const AuthenticatedApp = () => {
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/post-job" element={<PostJob />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
                 <Route path="*" element={<PageNotFound />} />
             </Route>
         </Routes>
     );
 };
 
-
 function App() {
-
     return (
         <AuthProvider>
             <QueryClientProvider client={queryClientInstance}>
                 <Router>
-                    <AuthenticatedApp />
+                    <AppContent />
                 </Router>
                 <Toaster />
             </QueryClientProvider>
         </AuthProvider>
-    )
+    );
 }
 
-export default App
+export default App;

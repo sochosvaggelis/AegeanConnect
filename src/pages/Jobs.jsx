@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import JobCard from '@/components/JobCard';
 import useLanguage from '@/lib/useLanguage';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabase';
 
 export default function Jobs() {
     const { t, lang } = useLanguage();
@@ -28,163 +28,92 @@ export default function Jobs() {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const filter = { status: 'active' };
-            if (category !== 'all') filter.category = category;
-            if (empType !== 'all') filter.employment_type = empType;
-            const data = await base44.entities.Job.filter(filter, '-created_date', 50);
-            setJobs(data);
+            let query = supabase.from('jobs').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(50);
+            if (category !== 'all') query = query.eq('category', category);
+            if (empType !== 'all') query = query.eq('employment_type', empType);
+            const { data } = await query;
+            setJobs(data || []);
             setLoading(false);
         };
         load();
     }, [category, empType]);
 
-    const filteredJobs = jobs.filter((job) => {
+    const filteredJobs = jobs.filter(job => {
         if (island !== 'all' && !job.location?.toLowerCase().includes(island.toLowerCase())) return false;
         if (!search.trim()) return true;
         const s = search.toLowerCase();
-        return (
-            job.title?.toLowerCase().includes(s) ||
-            job.hotel_name?.toLowerCase().includes(s) ||
-            job.location?.toLowerCase().includes(s)
-        );
+        return job.title?.toLowerCase().includes(s) || job.hotel_name?.toLowerCase().includes(s) || job.location?.toLowerCase().includes(s);
     });
 
     const categories = ['all', 'banquet', 'breakfast', 'catering', 'fine_dining', 'head_waiter', 'pool_beach', 'room_service', 'wine_expert'];
     const empTypes = ['all', 'full_time', 'part_time', 'seasonal', 'temporary'];
-
-    const catLabel = (c) => c === 'all' ? (lang === 'el' ? 'Όλες' : 'All') : t(`cat_${c}`);
-    const empLabel = (e) => e === 'all' ? (lang === 'el' ? 'Όλες' : 'All') : t(`emp_${e}`);
-
-    const clearFilters = () => {
-        setCategory('all');
-        setEmpType('all');
-        setIsland('all');
-        setSearch('');
-    };
-
-    const hasFilters = category !== 'all' || empType !== 'all' || island !== 'all' || search.trim();
-
     const ISLANDS = ['Corfu', 'Crete', 'Hydra', 'Ios', 'Kefalonia', 'Lefkada', 'Milos', 'Mykonos', 'Naxos', 'Paros', 'Rhodes', 'Samos', 'Santorini', 'Skiathos', 'Zakynthos'];
+
+    const catLabel = c => c === 'all' ? (lang === 'el' ? 'Όλες' : 'All') : t(`cat_${c}`);
+    const empLabel = e => e === 'all' ? (lang === 'el' ? 'Όλες' : 'All') : t(`emp_${e}`);
+    const clearFilters = () => { setCategory('all'); setEmpType('all'); setIsland('all'); setSearch(''); };
+    const hasFilters = category !== 'all' || empType !== 'all' || island !== 'all' || search.trim();
 
     return (
         <div style={{ background: '#eef4fd', minHeight: '100vh' }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                 <h1 className="font-display text-3xl font-bold text-foreground mb-6">{t('jobs_title')}</h1>
 
-                {/* Search & Filter bar */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                     <div className="relative flex-1">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                            className="pl-10 h-11 rounded-xl"
-                            style={{ background: 'hsl(40 55% 96%)', borderColor: 'hsl(40 35% 82%)' }}
-                            placeholder={t('hero_search_placeholder')}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                        <Input className="pl-10 h-11 rounded-xl" style={{ background: 'hsl(40 55% 96%)', borderColor: 'hsl(40 35% 82%)' }}
+                            placeholder={t('hero_search_placeholder')} value={search} onChange={e => setSearch(e.target.value)} />
                     </div>
-                    <Button
-                        variant="outline"
-                        className="h-11 rounded-xl gap-2 sm:w-auto"
-                        style={{ background: 'hsl(40 55% 96%)', borderColor: 'hsl(40 35% 82%)' }}
-                        onClick={() => setShowFilters(!showFilters)}
-                    >
-                        <SlidersHorizontal className="w-4 h-4" />
-                        {t('jobs_filter')}
+                    <Button variant="outline" className="h-11 rounded-xl gap-2" style={{ background: 'hsl(40 55% 96%)', borderColor: 'hsl(40 35% 82%)' }}
+                        onClick={() => setShowFilters(!showFilters)}>
+                        <SlidersHorizontal className="w-4 h-4" />{t('jobs_filter')}
                     </Button>
                 </div>
 
-                {/* Filters */}
                 {showFilters && (
                     <div className="bg-card rounded-2xl border border-border/50 p-4 mb-6 flex flex-col sm:flex-row gap-4">
+                        {[
+                            { label: lang === 'el' ? 'Κατηγορία' : 'Category', value: category, onChange: setCategory, options: categories, labelFn: catLabel },
+                            { label: lang === 'el' ? 'Τύπος Απασχόλησης' : 'Employment Type', value: empType, onChange: setEmpType, options: empTypes, labelFn: empLabel },
+                        ].map(({ label, value, onChange, options, labelFn }) => (
+                            <div key={label} className="flex-1">
+                                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{label}</label>
+                                <Select value={value} onValueChange={onChange}>
+                                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                                    <SelectContent>{options.map(o => <SelectItem key={o} value={o}>{labelFn(o)}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                        ))}
                         <div className="flex-1">
-                            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                                {lang === 'el' ? 'Κατηγορία' : 'Category'}
-                            </label>
-                            <Select value={category} onValueChange={setCategory}>
-                                <SelectTrigger className="rounded-xl">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {categories.map((c) => (
-                                        <SelectItem key={c} value={c}>{catLabel(c)}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex-1">
-                            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                                {lang === 'el' ? 'Τύπος Απασχόλησης' : 'Employment Type'}
-                            </label>
-                            <Select value={empType} onValueChange={setEmpType}>
-                                <SelectTrigger className="rounded-xl">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {empTypes.map((e) => (
-                                        <SelectItem key={e} value={e}>{empLabel(e)}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex-1">
-                            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                                {lang === 'el' ? 'Νησί' : 'Island'}
-                            </label>
+                            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{lang === 'el' ? 'Νησί' : 'Island'}</label>
                             <Select value={island} onValueChange={setIsland}>
-                                <SelectTrigger className="rounded-xl">
-                                    <SelectValue placeholder={lang === 'el' ? 'Όλα' : 'All'} />
-                                </SelectTrigger>
+                                <SelectTrigger className="rounded-xl"><SelectValue placeholder={lang === 'el' ? 'Όλα' : 'All'} /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">{lang === 'el' ? 'Όλα' : 'All'}</SelectItem>
-                                    {ISLANDS.map((isl) => (
-                                        <SelectItem key={isl} value={isl}>{isl}</SelectItem>
-                                    ))}
+                                    {ISLANDS.map(isl => <SelectItem key={isl} value={isl}>{isl}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
                 )}
 
-                {/* Active filters */}
                 {hasFilters && (
                     <div className="flex items-center gap-2 mb-4 flex-wrap">
-                        {category !== 'all' && (
-                            <Badge variant="secondary" className="gap-1 rounded-lg">
-                                {catLabel(category)}
-                                <X className="w-3 h-3 cursor-pointer" onClick={() => setCategory('all')} />
-                            </Badge>
-                        )}
-                        {empType !== 'all' && (
-                            <Badge variant="secondary" className="gap-1 rounded-lg">
-                                {empLabel(empType)}
-                                <X className="w-3 h-3 cursor-pointer" onClick={() => setEmpType('all')} />
-                            </Badge>
-                        )}
-                        {island !== 'all' && (
-                            <Badge variant="secondary" className="gap-1 rounded-lg">
-                                {island}
-                                <X className="w-3 h-3 cursor-pointer" onClick={() => setIsland('all')} />
-                            </Badge>
-                        )}
-                        <button onClick={clearFilters} className="text-xs text-primary hover:underline">
-                            {lang === 'el' ? 'Καθαρισμός' : 'Clear all'}
-                        </button>
+                        {category !== 'all' && <Badge variant="secondary" className="gap-1 rounded-lg">{catLabel(category)}<X className="w-3 h-3 cursor-pointer" onClick={() => setCategory('all')} /></Badge>}
+                        {empType !== 'all' && <Badge variant="secondary" className="gap-1 rounded-lg">{empLabel(empType)}<X className="w-3 h-3 cursor-pointer" onClick={() => setEmpType('all')} /></Badge>}
+                        {island !== 'all' && <Badge variant="secondary" className="gap-1 rounded-lg">{island}<X className="w-3 h-3 cursor-pointer" onClick={() => setIsland('all')} /></Badge>}
+                        <button onClick={clearFilters} className="text-xs text-primary hover:underline">{lang === 'el' ? 'Καθαρισμός' : 'Clear all'}</button>
                     </div>
                 )}
 
-                {/* Job list */}
                 {loading ? (
-                    <div className="flex justify-center py-20">
-                        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                    </div>
+                    <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
                 ) : filteredJobs.length === 0 ? (
                     <p className="text-center text-muted-foreground py-16">{t('jobs_no_results')}</p>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredJobs.map((job) => (
-                            <JobCard key={job.id} job={job} />
-                        ))}
+                        {filteredJobs.map(job => <JobCard key={job.id} job={job} />)}
                     </div>
                 )}
             </div>
